@@ -44,7 +44,7 @@ memoria para su origen y año de referencia.
 
 Viñals, R. (2026). *Localización óptima de puntos de recarga ultrarrápida
 para vehículo eléctrico en Aragón: modelo Life Freesve* [código].
-GitHub. https://github.com/USUARIO/tfm-recarga-aragon
+GitHub.(https://github.com/843298-spec/TFM_Rub-nVinals_AnexoA_scripts)
 
 ## Licencia
 
