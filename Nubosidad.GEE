@@ -1,0 +1,57 @@
+// ============================================================================
+// nubosidad_gee.js
+// ----------------------------------------------------------------------------
+// Nubosidad media de Aragón (criterio C5 del modelo multicriterio Life Freesvee)
+// a partir de la máscara de nubes del producto MODIS MOD09GA, promediada sobre
+// la serie 2016-2025 y exportada a 1 km en EPSG:25830.
+//
+// Editor de código de Google Earth Engine: https://code.earthengine.google.com
+//
+// NOTA: esta es la plantilla del proceso. Sustitúyela por tu script real de GEE
+//       para que el anexo refleje exactamente los parámetros empleados
+//       (fuente del límite de Aragón, banda y umbral de nube, escala de export).
+// ============================================================================
+
+// --- 1. Ámbito: límite de Aragón --------------------------------------------
+// Reemplaza por tu propia geometría o por la tabla (asset) que hayas usado.
+var aragon = ee.FeatureCollection('FAO/GAUL/2015/level1')
+  .filter(ee.Filter.eq('ADM1_NAME', 'Aragon'));
+var region = aragon.geometry();
+
+// --- 2. Periodo -------------------------------------------------------------
+var inicio = '2016-01-01';
+var fin    = '2025-12-31';
+
+// --- 3. Colección MODIS MOD09GA y máscara de nubes --------------------------
+// La banda 'state_1km' contiene los bits de estado; los bits 0-1 codifican el
+// estado de nube (0 = despejado, 1 = nuboso, 2 = mixto, 3 = no determinado).
+function fraccionNube(imagen) {
+  var estado = imagen.select('state_1km');
+  var nube = estado.bitwiseAnd(3);          // bits 0-1
+  var esNube = nube.eq(1).rename('nube');   // 1 si nuboso, 0 en caso contrario
+  return esNube.copyProperties(imagen, ['system:time_start']);
+}
+
+var coleccion = ee.ImageCollection('MODIS/061/MOD09GA')
+  .filterDate(inicio, fin)
+  .filterBounds(region)
+  .map(fraccionNube);
+
+// --- 4. Nubosidad media (proporción de días nubosos, 0-1) -------------------
+var nubosidadMedia = coleccion.mean().multiply(100).rename('nubosidad_pct')
+  .clip(region);
+
+// --- 5. Visualización -------------------------------------------------------
+Map.centerObject(region, 7);
+Map.addLayer(nubosidadMedia, {min: 0, max: 100,
+  palette: ['ffffff', '9ecae1', '3182bd', '08306b']}, 'Nubosidad media (%)');
+
+// --- 6. Exportación a EPSG:25830, 1 km --------------------------------------
+Export.image.toDrive({
+  image: nubosidadMedia,
+  description: 'nubosidad_aragon_pct',
+  region: region,
+  scale: 1000,               // 1 km
+  crs: 'EPSG:25830',
+  maxPixels: 1e9
+});
